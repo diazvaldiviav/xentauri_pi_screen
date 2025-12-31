@@ -4,7 +4,7 @@
 
 /**
  * Main application controller for Xentauri Pi Screen.
- * Coordinates WebSocket connection, scene rendering, and UI state.
+ * Handles pairing flow, WebSocket connection, and scene rendering.
  */
 const XentauriApp = {
     // WebSocket client
@@ -17,17 +17,20 @@ const XentauriApp = {
         connectionDetails: null,
         displayContainer: null,
         pairingScreen: null,
-        pairingCode: null,
+        pairingInput: null,
+        pairButton: null,
+        pairingStatus: null,
         errorScreen: null,
         errorMessage: null,
-        retryCountdown: null
+        retryButton: null
     },
 
     // State
     state: {
+        paired: false,
         connected: false,
         reconnecting: false,
-        lastScene: null
+        pairing: false
     },
 
     // -------------------------------------------------------------------------
@@ -46,17 +49,15 @@ const XentauriApp = {
         // Initialize scene renderer
         SceneRenderer.init(this.elements.displayContainer);
 
-        // Check configuration
-        if (!this.validateConfig()) {
-            return;
-        }
-
-        // Initialize WebSocket
-        this.initWebSocket();
-
-        // Restore previous state if enabled
-        if (CONFIG.PERSIST_CONTENT) {
-            this.restoreState();
+        // Check if already paired
+        if (isPaired()) {
+            console.log('[Xentauri App] Device is paired, connecting...');
+            this.state.paired = true;
+            this.showMainScreen();
+            this.initWebSocket();
+        } else {
+            console.log('[Xentauri App] Device not paired, showing pairing screen...');
+            this.showPairingScreen();
         }
 
         // Setup keyboard shortcuts
@@ -75,25 +76,175 @@ const XentauriApp = {
             connectionDetails: document.getElementById('connection-details'),
             displayContainer: document.getElementById('display-container'),
             pairingScreen: document.getElementById('pairing-screen'),
-            pairingCode: document.getElementById('pairing-code'),
+            pairingInput: document.getElementById('pairing-input'),
+            pairButton: document.getElementById('pair-button'),
+            pairingStatus: document.getElementById('pairing-status'),
             errorScreen: document.getElementById('error-screen'),
             errorMessage: document.getElementById('error-message'),
-            retryCountdown: document.getElementById('retry-countdown')
+            retryButton: document.getElementById('retry-button')
         };
+
+        // Setup pairing input handlers
+        this.setupPairingHandlers();
+    },
+
+    // -------------------------------------------------------------------------
+    // Pairing Flow
+    // -------------------------------------------------------------------------
+
+    /**
+     * Setup pairing screen event handlers.
+     */
+    setupPairingHandlers() {
+        const input = this.elements.pairingInput;
+        const button = this.elements.pairButton;
+
+        if (input) {
+            // Handle input changes
+            input.addEventListener('input', (e) => {
+                // Force uppercase and remove non-alphanumeric
+                let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                e.target.value = value;
+
+                // Enable/disable button based on length
+                if (button) {
+                    button.disabled = value.length !== 6;
+                }
+
+                // Clear error state
+                input.classList.remove('error');
+                this.setPairingStatus('', '');
+            });
+
+            // Handle Enter key
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && input.value.length === 6) {
+                    this.doPairing();
+                }
+            });
+        }
+
+        if (button) {
+            button.addEventListener('click', () => this.doPairing());
+        }
+
+        // Retry button
+        if (this.elements.retryButton) {
+            this.elements.retryButton.addEventListener('click', () => {
+                this.hideError();
+                if (isPaired()) {
+                    this.initWebSocket();
+                } else {
+                    this.showPairingScreen();
+                }
+            });
+        }
     },
 
     /**
-     * Validate configuration.
+     * Show pairing screen.
      */
-    validateConfig() {
-        if (!CONFIG.AGENT_ID || CONFIG.AGENT_ID === 'YOUR_AGENT_ID_HERE') {
-            this.showError(
-                'Configuration Error',
-                'Agent ID not configured. Please edit js/config.js and set your AGENT_ID.'
-            );
-            return false;
+    showPairingScreen() {
+        if (this.elements.pairingScreen) {
+            this.elements.pairingScreen.classList.remove('hidden');
         }
-        return true;
+        if (this.elements.displayContainer) {
+            this.elements.displayContainer.classList.add('hidden');
+        }
+        if (this.elements.connectionOverlay) {
+            this.elements.connectionOverlay.classList.add('hidden');
+        }
+
+        // Focus the input
+        setTimeout(() => {
+            if (this.elements.pairingInput) {
+                this.elements.pairingInput.focus();
+            }
+        }, 100);
+    },
+
+    /**
+     * Hide pairing screen and show main display.
+     */
+    showMainScreen() {
+        if (this.elements.pairingScreen) {
+            this.elements.pairingScreen.classList.add('hidden');
+        }
+        if (this.elements.displayContainer) {
+            this.elements.displayContainer.classList.remove('hidden');
+        }
+    },
+
+    /**
+     * Perform pairing with the entered code.
+     */
+    async doPairing() {
+        if (this.state.pairing) return;
+
+        const code = this.elements.pairingInput?.value || '';
+        if (code.length !== 6) {
+            this.setPairingStatus('Please enter a 6-character code', 'error');
+            return;
+        }
+
+        this.state.pairing = true;
+
+        // Update UI to loading state
+        if (this.elements.pairButton) {
+            this.elements.pairButton.classList.add('loading');
+            this.elements.pairButton.disabled = true;
+        }
+        this.setPairingStatus('Pairing...', '');
+
+        // Call pairing service
+        const result = await PairingService.pair(code);
+
+        this.state.pairing = false;
+
+        // Reset button state
+        if (this.elements.pairButton) {
+            this.elements.pairButton.classList.remove('loading');
+        }
+
+        if (result.success) {
+            // Success!
+            this.setPairingStatus('Paired successfully!', 'success');
+            if (this.elements.pairingInput) {
+                this.elements.pairingInput.classList.add('success');
+            }
+
+            // Wait a moment then switch to main screen
+            setTimeout(() => {
+                this.state.paired = true;
+                this.showMainScreen();
+                this.showConnectionStatus('Connecting to Xentauri...', '');
+                this.initWebSocket();
+            }, 1000);
+
+        } else {
+            // Error
+            this.setPairingStatus(result.error || 'Pairing failed', 'error');
+            if (this.elements.pairingInput) {
+                this.elements.pairingInput.classList.add('error');
+            }
+            if (this.elements.pairButton) {
+                this.elements.pairButton.disabled = false;
+            }
+        }
+    },
+
+    /**
+     * Set pairing status message.
+     */
+    setPairingStatus(message, type) {
+        const status = this.elements.pairingStatus;
+        if (status) {
+            status.textContent = message;
+            status.className = 'pairing-status';
+            if (type) {
+                status.classList.add(type);
+            }
+        }
     },
 
     // -------------------------------------------------------------------------
@@ -104,8 +255,16 @@ const XentauriApp = {
      * Initialize WebSocket connection.
      */
     initWebSocket() {
+        const agentId = getAgentId();
+
+        if (!agentId) {
+            console.error('[Xentauri App] No agent ID found');
+            this.showPairingScreen();
+            return;
+        }
+
         this.ws = new XentauriWebSocket({
-            agentId: CONFIG.AGENT_ID,
+            agentId: agentId,
             wsUrl: CONFIG.WS_URL,
             onConnected: () => this.handleConnected(),
             onDisconnected: (data) => this.handleDisconnected(data),
@@ -114,8 +273,10 @@ const XentauriApp = {
             onReconnecting: (data) => this.handleReconnecting(data)
         });
 
-        // Connect
+        // Show connecting overlay
         this.showConnectionStatus('Connecting to Xentauri...', '');
+
+        // Connect
         this.ws.connect();
     },
 
@@ -131,7 +292,12 @@ const XentauriApp = {
         // Hide connection overlay
         this.hideConnectionOverlay();
 
-        // Show idle screen if no scene
+        // Restore previous state if enabled
+        if (CONFIG.PERSIST_CONTENT) {
+            this.restoreState();
+        }
+
+        // Show idle screen if no scene restored
         if (!SceneRenderer.hasScene()) {
             SceneRenderer.showIdleScreen();
         }
@@ -344,7 +510,7 @@ const XentauriApp = {
             this.elements.errorScreen.classList.remove('hidden');
         }
 
-        // Hide connection overlay
+        // Hide other overlays
         this.hideConnectionOverlay();
     },
 
@@ -358,6 +524,43 @@ const XentauriApp = {
     },
 
     // -------------------------------------------------------------------------
+    // Unpair / Reset
+    // -------------------------------------------------------------------------
+
+    /**
+     * Unpair this device and show pairing screen.
+     */
+    unpair() {
+        console.log('[Xentauri App] Unpairing device...');
+
+        // Disconnect WebSocket
+        if (this.ws) {
+            this.ws.disconnect();
+            this.ws = null;
+        }
+
+        // Clear pairing data
+        PairingService.unpair();
+
+        // Reset state
+        this.state.paired = false;
+        this.state.connected = false;
+
+        // Clear input
+        if (this.elements.pairingInput) {
+            this.elements.pairingInput.value = '';
+            this.elements.pairingInput.classList.remove('success', 'error');
+        }
+        if (this.elements.pairButton) {
+            this.elements.pairButton.disabled = true;
+        }
+        this.setPairingStatus('', '');
+
+        // Show pairing screen
+        this.showPairingScreen();
+    },
+
+    // -------------------------------------------------------------------------
     // Keyboard Shortcuts
     // -------------------------------------------------------------------------
 
@@ -366,26 +569,37 @@ const XentauriApp = {
      */
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
-            // ESC - Clear content
-            if (e.key === 'Escape') {
+            // ESC - Clear content (only when connected)
+            if (e.key === 'Escape' && this.state.connected) {
                 this.handleClearContent();
             }
 
             // F - Toggle fullscreen
             if (e.key === 'f' || e.key === 'F') {
-                this.toggleFullscreen();
+                if (!this.elements.pairingInput || document.activeElement !== this.elements.pairingInput) {
+                    this.toggleFullscreen();
+                }
             }
 
-            // R - Force reconnect
-            if (e.key === 'r' || e.key === 'R') {
-                if (this.ws) {
-                    this.ws.forceReconnect();
+            // R - Force reconnect (only when paired)
+            if ((e.key === 'r' || e.key === 'R') && this.state.paired) {
+                if (!this.elements.pairingInput || document.activeElement !== this.elements.pairingInput) {
+                    if (this.ws) {
+                        this.ws.forceReconnect();
+                    }
                 }
+            }
+
+            // U - Unpair (Shift+U for safety)
+            if (e.key === 'U' && e.shiftKey) {
+                this.unpair();
             }
 
             // D - Toggle debug info
             if (e.key === 'd' || e.key === 'D') {
-                this.toggleDebugInfo();
+                if (!this.elements.pairingInput || document.activeElement !== this.elements.pairingInput) {
+                    this.toggleDebugInfo();
+                }
             }
         });
     },
@@ -406,6 +620,8 @@ const XentauriApp = {
      */
     toggleDebugInfo() {
         console.log('[Xentauri App] Debug Info:', {
+            paired: this.state.paired,
+            agentId: getAgentId(),
             connected: this.state.connected,
             reconnecting: this.state.reconnecting,
             hasScene: SceneRenderer.hasScene(),

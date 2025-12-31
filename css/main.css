@@ -95,7 +95,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -109,36 +109,168 @@ body {
 .pairing-content {
     text-align: center;
     padding: 3rem;
+    max-width: 500px;
+}
+
+.pairing-logo {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #4a90d9 0%, #7b2cbf 100%);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: bold;
+    color: #fff;
+    margin: 0 auto 1.5rem;
+    box-shadow: 0 10px 40px rgba(74, 144, 217, 0.3);
 }
 
 .pairing-content h1 {
-    font-size: 3rem;
-    color: #4a90d9;
-    margin-bottom: 1.5rem;
-}
-
-.pairing-content p {
-    color: #888;
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
-}
-
-.pairing-code {
-    font-size: 4rem;
-    font-weight: bold;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    letter-spacing: 0.5rem;
+    font-size: 2.5rem;
     color: #fff;
-    background: rgba(74, 144, 217, 0.1);
-    padding: 1.5rem 3rem;
-    border-radius: 16px;
-    border: 2px solid #4a90d9;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.pairing-subtitle {
+    color: #888;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.pairing-input-container {
     margin: 2rem 0;
 }
 
-.pairing-hint {
+.pairing-input {
+    width: 100%;
+    max-width: 300px;
+    font-size: 2.5rem;
+    font-weight: bold;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    letter-spacing: 0.8rem;
+    text-align: center;
+    text-transform: uppercase;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid #333;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.pairing-input::placeholder {
+    color: #444;
+    letter-spacing: 0.5rem;
+}
+
+.pairing-input:focus {
+    border-color: #4a90d9;
+    background: rgba(74, 144, 217, 0.1);
+    box-shadow: 0 0 20px rgba(74, 144, 217, 0.2);
+}
+
+.pairing-input.error {
+    border-color: #ef5350;
+    background: rgba(239, 83, 80, 0.1);
+}
+
+.pairing-input.success {
+    border-color: #4caf50;
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.pair-button {
+    width: 100%;
+    max-width: 300px;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #4a90d9 0%, #3a7bc8 100%);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 1rem;
+}
+
+.pair-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(74, 144, 217, 0.3);
+}
+
+.pair-button:disabled {
+    background: #333;
     color: #666;
-    font-size: 0.9rem;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.pair-button.loading {
+    position: relative;
+    color: transparent;
+}
+
+.pair-button.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.pairing-status {
+    min-height: 1.5rem;
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.pairing-status.error {
+    color: #ef5350;
+}
+
+.pairing-status.success {
+    color: #4caf50;
+}
+
+.pairing-instructions {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pairing-instructions p {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.retry-button {
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    color: #fff;
+    background: #4a90d9;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: background 0.3s ease;
+}
+
+.retry-button:hover {
+    background: #3a7bc8;
 }
 
 /* -----------------------------------------------------------------------------

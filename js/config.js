@@ -4,8 +4,7 @@
 
 /**
  * Configuration object for the Xentauri Pi Screen client.
- *
- * IMPORTANT: Update AGENT_ID with your device's agent_id before deploying.
+ * Agent ID is now stored in localStorage after pairing.
  */
 const CONFIG = {
     // -------------------------------------------------------------------------
@@ -22,13 +21,18 @@ const CONFIG = {
         return `${wsProtocol}://${host}/ws/devices`;
     },
 
+    // Pairing API endpoint
+    get PAIR_URL() {
+        return `${this.BACKEND_URL}/devices/pair`;
+    },
+
     // -------------------------------------------------------------------------
     // Device Configuration
     // -------------------------------------------------------------------------
 
-    // IMPORTANT: Set this to your device's agent_id
-    // Get this from the device pairing process or from the database
-    AGENT_ID: 'YOUR_AGENT_ID_HERE',
+    // Agent ID is stored in localStorage after pairing
+    // Use getAgentId() function to retrieve it
+    STORAGE_KEY_AGENT_ID: 'xentauri_agent_id',
 
     // Device display name (for debugging)
     DEVICE_NAME: 'Raspberry Pi Screen',
@@ -78,9 +82,65 @@ const CONFIG = {
     // Content persistence (restore on refresh)
     PERSIST_CONTENT: true,
 
-    // Storage key for local storage
+    // Storage key for content state
     STORAGE_KEY: 'xentauri_pi_screen'
 };
+
+// -------------------------------------------------------------------------
+// Agent ID Management Functions
+// -------------------------------------------------------------------------
+
+/**
+ * Get the stored agent ID from localStorage.
+ * @returns {string|null} Agent ID or null if not paired
+ */
+function getAgentId() {
+    try {
+        return localStorage.getItem(CONFIG.STORAGE_KEY_AGENT_ID);
+    } catch (e) {
+        console.error('[Config] Failed to get agent ID:', e);
+        return null;
+    }
+}
+
+/**
+ * Store the agent ID in localStorage after successful pairing.
+ * @param {string} agentId - The agent ID to store
+ */
+function setAgentId(agentId) {
+    try {
+        localStorage.setItem(CONFIG.STORAGE_KEY_AGENT_ID, agentId);
+        console.log('[Config] Agent ID stored:', agentId);
+    } catch (e) {
+        console.error('[Config] Failed to store agent ID:', e);
+    }
+}
+
+/**
+ * Clear the stored agent ID (unpair).
+ */
+function clearAgentId() {
+    try {
+        localStorage.removeItem(CONFIG.STORAGE_KEY_AGENT_ID);
+        console.log('[Config] Agent ID cleared');
+    } catch (e) {
+        console.error('[Config] Failed to clear agent ID:', e);
+    }
+}
+
+/**
+ * Check if the device is paired.
+ * @returns {boolean} True if agent ID exists
+ */
+function isPaired() {
+    return getAgentId() !== null;
+}
+
+// Make functions globally available
+window.getAgentId = getAgentId;
+window.setAgentId = setAgentId;
+window.clearAgentId = clearAgentId;
+window.isPaired = isPaired;
 
 // Freeze config to prevent accidental modifications
 Object.freeze(CONFIG);
@@ -92,7 +152,9 @@ if (CONFIG.DEBUG) {
     console.log('[Xentauri Config] Loaded configuration:', {
         backend: CONFIG.BACKEND_URL,
         wsUrl: CONFIG.WS_URL,
-        agentId: CONFIG.AGENT_ID === 'YOUR_AGENT_ID_HERE' ? '(NOT SET)' : CONFIG.AGENT_ID,
+        pairUrl: CONFIG.PAIR_URL,
+        isPaired: isPaired(),
+        agentId: getAgentId() || '(NOT PAIRED)',
         debug: CONFIG.DEBUG
     });
 }

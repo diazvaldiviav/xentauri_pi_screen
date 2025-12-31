@@ -17,11 +17,16 @@
             -webkit-user-select: none;
             user-select: none;
         }
+        /* Allow selection in pairing input */
+        .pairing-input {
+            -webkit-user-select: text;
+            user-select: text;
+        }
     </style>
 </head>
 <body>
     <!-- Connection Status Overlay -->
-    <div id="connection-overlay" class="connection-overlay">
+    <div id="connection-overlay" class="connection-overlay hidden">
         <div class="connection-status">
             <div class="spinner"></div>
             <h2 id="connection-message">Connecting to Xentauri...</h2>
@@ -30,17 +35,46 @@
     </div>
 
     <!-- Main Display Container -->
-    <div id="display-container" class="display-container">
+    <div id="display-container" class="display-container hidden">
         <!-- Scene Graph will be rendered here -->
     </div>
 
-    <!-- Pairing Mode Screen -->
-    <div id="pairing-screen" class="pairing-screen hidden">
+    <!-- Pairing Screen - Enter Code from iOS App -->
+    <div id="pairing-screen" class="pairing-screen">
         <div class="pairing-content">
+            <div class="pairing-logo">X</div>
             <h1>Xentauri</h1>
-            <p>Enter this code in your iOS app:</p>
-            <div id="pairing-code" class="pairing-code">------</div>
-            <p class="pairing-hint">Code expires in 15 minutes</p>
+            <p class="pairing-subtitle">Enter the pairing code from your iOS app</p>
+
+            <!-- Code Input -->
+            <div class="pairing-input-container">
+                <input
+                    type="text"
+                    id="pairing-input"
+                    class="pairing-input"
+                    maxlength="6"
+                    placeholder="------"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                >
+            </div>
+
+            <!-- Pair Button -->
+            <button id="pair-button" class="pair-button" disabled>
+                Pair Device
+            </button>
+
+            <!-- Status Message -->
+            <p id="pairing-status" class="pairing-status"></p>
+
+            <!-- Instructions -->
+            <div class="pairing-instructions">
+                <p>1. Open Xentauri on your iPhone</p>
+                <p>2. Create a new device</p>
+                <p>3. Enter the 6-character code shown</p>
+            </div>
         </div>
     </div>
 
@@ -50,12 +84,14 @@
             <h2>Connection Error</h2>
             <p id="error-message"></p>
             <p id="retry-countdown"></p>
+            <button id="retry-button" class="retry-button">Retry</button>
         </div>
     </div>
 
     <!-- Scripts -->
     <script src="js/config.js"></script>
     <script src="js/utils/helpers.js"></script>
+    <script src="js/pairing/service.js"></script>
     <script src="js/websocket/client.js"></script>
     <script src="js/renderer/components.js"></script>
     <script src="js/renderer/scene.js"></script>
