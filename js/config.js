@@ -1,0 +1,98 @@
+/* =============================================================================
+   XENTAURI PI SCREEN - Configuration
+   ============================================================================= */
+
+/**
+ * Configuration object for the Xentauri Pi Screen client.
+ *
+ * IMPORTANT: Update AGENT_ID with your device's agent_id before deploying.
+ */
+const CONFIG = {
+    // -------------------------------------------------------------------------
+    // Backend Configuration
+    // -------------------------------------------------------------------------
+
+    // Production backend URL
+    BACKEND_URL: 'https://xentauri-cloud-core.fly.dev',
+
+    // WebSocket URL (derived from backend URL)
+    get WS_URL() {
+        const wsProtocol = this.BACKEND_URL.startsWith('https') ? 'wss' : 'ws';
+        const host = this.BACKEND_URL.replace(/^https?:\/\//, '');
+        return `${wsProtocol}://${host}/ws/devices`;
+    },
+
+    // -------------------------------------------------------------------------
+    // Device Configuration
+    // -------------------------------------------------------------------------
+
+    // IMPORTANT: Set this to your device's agent_id
+    // Get this from the device pairing process or from the database
+    AGENT_ID: 'YOUR_AGENT_ID_HERE',
+
+    // Device display name (for debugging)
+    DEVICE_NAME: 'Raspberry Pi Screen',
+
+    // -------------------------------------------------------------------------
+    // Connection Settings
+    // -------------------------------------------------------------------------
+
+    // WebSocket reconnection settings
+    RECONNECT: {
+        BASE_DELAY: 1000,      // Start at 1 second
+        MAX_DELAY: 30000,      // Max 30 seconds
+        MULTIPLIER: 1.5,       // Exponential backoff multiplier
+        JITTER: 0.1            // Random jitter factor (10%)
+    },
+
+    // Heartbeat interval (30 seconds)
+    HEARTBEAT_INTERVAL: 30000,
+
+    // -------------------------------------------------------------------------
+    // Display Settings
+    // -------------------------------------------------------------------------
+
+    // Default layout settings
+    LAYOUT: {
+        DEFAULT_PADDING: '16px',
+        DEFAULT_GAP: '16px',
+        DEFAULT_BORDER_RADIUS: '12px'
+    },
+
+    // Clock format: '12h' or '24h'
+    CLOCK_FORMAT: '12h',
+
+    // Weather units: 'fahrenheit' or 'celsius'
+    WEATHER_UNITS: 'fahrenheit',
+
+    // -------------------------------------------------------------------------
+    // Debug Settings
+    // -------------------------------------------------------------------------
+
+    // Enable debug logging
+    DEBUG: true,
+
+    // Show connection status overlay
+    SHOW_CONNECTION_STATUS: true,
+
+    // Content persistence (restore on refresh)
+    PERSIST_CONTENT: true,
+
+    // Storage key for local storage
+    STORAGE_KEY: 'xentauri_pi_screen'
+};
+
+// Freeze config to prevent accidental modifications
+Object.freeze(CONFIG);
+Object.freeze(CONFIG.RECONNECT);
+Object.freeze(CONFIG.LAYOUT);
+
+// Log configuration on load (debug mode only)
+if (CONFIG.DEBUG) {
+    console.log('[Xentauri Config] Loaded configuration:', {
+        backend: CONFIG.BACKEND_URL,
+        wsUrl: CONFIG.WS_URL,
+        agentId: CONFIG.AGENT_ID === 'YOUR_AGENT_ID_HERE' ? '(NOT SET)' : CONFIG.AGENT_ID,
+        debug: CONFIG.DEBUG
+    });
+}

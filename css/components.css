@@ -1,0 +1,338 @@
+/* =============================================================================
+   XENTAURI PI SCREEN - Component Styles
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   Base Component
+   ----------------------------------------------------------------------------- */
+.component {
+    overflow: hidden;
+    border-radius: 12px;
+    padding: 20px;
+    background: #1a1a2e;
+}
+
+.component.component-primary {
+    background: #1a1a2e;
+}
+
+.component.component-secondary {
+    background: #16213e;
+}
+
+.component.component-tertiary {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* -----------------------------------------------------------------------------
+   Calendar Components
+   ----------------------------------------------------------------------------- */
+
+/* Calendar Agenda */
+.calendar-agenda {
+    overflow-y: auto;
+    max-height: 100%;
+}
+
+.agenda-event {
+    padding: 12px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border-left: 4px solid #4285f4;
+}
+
+.agenda-event:last-child {
+    margin-bottom: 0;
+}
+
+.agenda-event-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.agenda-event-time {
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+
+/* Calendar Widget */
+.calendar-widget {
+    overflow-y: auto;
+}
+
+.calendar-widget h3 {
+    margin: 0 0 12px 0;
+    font-size: 1.1em;
+    opacity: 0.8;
+}
+
+.calendar-widget-event {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.calendar-widget-event:last-child {
+    border-bottom: none;
+}
+
+.event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.event-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.event-info-title {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.event-info-time {
+    font-size: 0.8em;
+    opacity: 0.6;
+}
+
+/* Calendar Month */
+.calendar-month h3 {
+    margin: 0 0 12px 0;
+    font-size: 1.2em;
+}
+
+/* Meeting Detail */
+.meeting-detail {
+    padding: 20px;
+}
+
+.meeting-detail h2 {
+    margin: 0 0 16px 0;
+    font-size: 28px;
+}
+
+.meeting-detail-time {
+    font-size: 20px;
+    opacity: 0.8;
+    margin-bottom: 12px;
+}
+
+.meeting-detail-location {
+    font-size: 18px;
+    opacity: 0.7;
+    margin-bottom: 8px;
+}
+
+.meeting-detail-description {
+    font-size: 16px;
+    opacity: 0.6;
+    margin-top: 16px;
+    white-space: pre-wrap;
+}
+
+.meeting-detail-attendees {
+    margin-top: 16px;
+    font-size: 14px;
+    opacity: 0.6;
+}
+
+/* -----------------------------------------------------------------------------
+   Clock Components
+   ----------------------------------------------------------------------------- */
+
+/* Clock Digital */
+.clock-digital {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+}
+
+.clock-time {
+    font-size: 4em;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+}
+
+.clock-date {
+    font-size: 1.2em;
+    opacity: 0.7;
+    margin-top: 8px;
+}
+
+/* Clock Analog (placeholder) */
+.clock-analog {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+/* -----------------------------------------------------------------------------
+   Weather Component
+   ----------------------------------------------------------------------------- */
+.weather-current {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.weather-icon {
+    font-size: 3em;
+}
+
+.weather-temp {
+    font-size: 2.5em;
+    font-weight: 300;
+    margin: 8px 0;
+}
+
+.weather-location {
+    opacity: 0.7;
+}
+
+.weather-placeholder {
+    font-size: 0.7em;
+    opacity: 0.5;
+    margin-top: 8px;
+}
+
+/* -----------------------------------------------------------------------------
+   Countdown Timer
+   ----------------------------------------------------------------------------- */
+.countdown-timer {
+    text-align: center;
+    padding: 20px;
+}
+
+.countdown-label {
+    font-size: 16px;
+    opacity: 0.7;
+    margin-bottom: 8px;
+}
+
+.countdown-display {
+    font-size: 64px;
+    font-weight: bold;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+/* -----------------------------------------------------------------------------
+   Document Summary/Preview
+   ----------------------------------------------------------------------------- */
+.doc-summary {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: 100%;
+}
+
+.doc-summary h3 {
+    margin: 0 0 12px 0;
+    font-size: 22px;
+}
+
+.doc-summary-text {
+    font-size: 16px;
+    opacity: 0.8;
+    line-height: 1.5;
+}
+
+.doc-key-points {
+    margin-top: 16px;
+    padding-left: 20px;
+}
+
+.doc-key-points li {
+    margin-bottom: 8px;
+}
+
+.doc-last-modified {
+    font-size: 12px;
+    opacity: 0.5;
+    margin-top: 16px;
+}
+
+.ai-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    background: rgba(123, 44, 191, 0.3);
+    border-radius: 4px;
+    color: #b388ff;
+}
+
+.ai-content {
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/* -----------------------------------------------------------------------------
+   Text Block
+   ----------------------------------------------------------------------------- */
+.text-block {
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow: auto;
+    max-height: 100%;
+}
+
+/* -----------------------------------------------------------------------------
+   Spacer
+   ----------------------------------------------------------------------------- */
+.spacer {
+    flex-shrink: 0;
+}
+
+/* -----------------------------------------------------------------------------
+   Image Display
+   ----------------------------------------------------------------------------- */
+.image-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.image-display img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* -----------------------------------------------------------------------------
+   Web Embed
+   ----------------------------------------------------------------------------- */
+.web-embed {
+    width: 100%;
+    height: 100%;
+}
+
+.web-embed iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* -----------------------------------------------------------------------------
+   Unknown Component
+   ----------------------------------------------------------------------------- */
+.unknown-component {
+    opacity: 0.5;
+    padding: 16px;
+    text-align: center;
+    background: rgba(255, 0, 0, 0.1);
+    border-radius: 8px;
+}

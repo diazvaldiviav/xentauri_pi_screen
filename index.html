@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Xentauri Pi Screen</title>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/themes.css">
+
+    <!-- Prevent context menu and selection for kiosk mode -->
+    <style>
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Connection Status Overlay -->
+    <div id="connection-overlay" class="connection-overlay">
+        <div class="connection-status">
+            <div class="spinner"></div>
+            <h2 id="connection-message">Connecting to Xentauri...</h2>
+            <p id="connection-details"></p>
+        </div>
+    </div>
+
+    <!-- Main Display Container -->
+    <div id="display-container" class="display-container">
+        <!-- Scene Graph will be rendered here -->
+    </div>
+
+    <!-- Pairing Mode Screen -->
+    <div id="pairing-screen" class="pairing-screen hidden">
+        <div class="pairing-content">
+            <h1>Xentauri</h1>
+            <p>Enter this code in your iOS app:</p>
+            <div id="pairing-code" class="pairing-code">------</div>
+            <p class="pairing-hint">Code expires in 15 minutes</p>
+        </div>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="error-screen" class="error-screen hidden">
+        <div class="error-content">
+            <h2>Connection Error</h2>
+            <p id="error-message"></p>
+            <p id="retry-countdown"></p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils/helpers.js"></script>
+    <script src="js/websocket/client.js"></script>
+    <script src="js/renderer/components.js"></script>
+    <script src="js/renderer/scene.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
