@@ -6,6 +6,7 @@ Real Raspberry Pi screen client for Xentauri Cloud Core. This is a standalone Ja
 
 - **Pure JavaScript** - No build tools or frameworks required
 - **WebSocket Connection** - Real-time communication with Xentauri Cloud
+- **Pairing Flow** - Easy 6-character code pairing from iOS app
 - **Automatic Reconnection** - Exponential backoff with jitter
 - **Scene Graph Rendering** - Dynamic layouts with 17 component types
 - **State Persistence** - Restores content after refresh/reboot
@@ -13,28 +14,72 @@ Real Raspberry Pi screen client for Xentauri Cloud Core. This is a standalone Ja
 
 ## Quick Start
 
-### 1. Configure Agent ID
+### Development (Mac/PC)
 
-Edit `js/config.js` and set your device's agent ID:
+> **IMPORTANT:** Do NOT open `index.html` directly (`file://`). WebSocket connections are blocked by browsers from `file://` URLs.
 
-```javascript
-AGENT_ID: 'your-device-agent-id-here',
+```bash
+# Start local server
+./start.sh
+
+# Open in browser
+open http://localhost:8080
 ```
 
-To get your agent ID:
-1. Create a device in the Xentauri backend
-2. Pair the device using the iOS app or API
-3. The agent_id will be assigned during pairing
+### Raspberry Pi Deployment
 
-### 2. Test Locally
+```bash
+# 1. Clone the repo on your Pi
+git clone https://github.com/YOUR_USER/YOUR_REPO.git
+cd YOUR_REPO/xentauri_pi_screen
 
-Open `index.html` in a browser to test the connection.
+# 2. Run setup (one-time)
+./setup-pi.sh
 
-### 3. Deploy to Raspberry Pi
+# 3. Start in kiosk mode
+./kiosk.sh
+```
 
-Copy the entire `xentauri_pi_screen/` folder to your Raspberry Pi.
+---
 
-## Raspberry Pi Setup
+## Pairing Flow
+
+1. **Create a device** in the Xentauri iOS app (or via API)
+2. **Get the 6-character pairing code** displayed in the app
+3. **Enter the code** on the Pi screen's pairing page
+4. **Done!** The device connects automatically
+
+The agent ID is generated automatically and stored in `localStorage`.
+
+---
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `start.sh` | Start web server for development |
+| `setup-pi.sh` | One-time Raspberry Pi setup (creates systemd service) |
+| `kiosk.sh` | Start in fullscreen kiosk mode |
+
+### start.sh
+```bash
+./start.sh [port]  # Default: 8080
+```
+
+### setup-pi.sh
+Installs dependencies and creates:
+- Systemd service for auto-start
+- Chromium kiosk autostart
+- Unclutter for hiding cursor
+
+### kiosk.sh
+```bash
+./kiosk.sh [port]  # Start server + Chromium fullscreen
+```
+
+---
+
+## Raspberry Pi Setup (Detailed)
 
 ### Hardware Requirements
 
@@ -46,117 +91,69 @@ Copy the entire `xentauri_pi_screen/` folder to your Raspberry Pi.
 
 ### Software Setup
 
-#### 1. Install Raspberry Pi OS Lite
+#### 1. Install Raspberry Pi OS
 
-Download and flash Raspberry Pi OS Lite (64-bit) using Raspberry Pi Imager.
+Download and flash **Raspberry Pi OS with Desktop** (64-bit) using Raspberry Pi Imager.
 
-#### 2. Enable SSH and Configure WiFi
-
-During imaging, configure:
+Configure during imaging:
 - Username/password
 - WiFi credentials
 - SSH enabled
 
-#### 3. Install Required Packages
+#### 2. Clone Repository
 
 ```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
+ssh pi@raspberrypi.local
 
-# Install X11 and Chromium
-sudo apt install -y xorg chromium-browser unclutter
-
-# Optional: Install for auto-login
-sudo apt install -y lightdm
+# Clone your repo
+git clone https://github.com/YOUR_USER/YOUR_REPO.git
+cd YOUR_REPO/xentauri_pi_screen
 ```
 
-#### 4. Copy Screen Client
+#### 3. Run Setup
 
 ```bash
-# From your local machine
-scp -r xentauri_pi_screen/ pi@raspberrypi.local:/home/pi/
+chmod +x *.sh
+./setup-pi.sh
 ```
 
-#### 5. Create Startup Script
-
-Create `/home/pi/start_xentauri.sh`:
+#### 4. Start Service
 
 ```bash
-#!/bin/bash
-
-# Wait for network
-sleep 5
-
-# Disable screen blanking
-xset s off
-xset -dpms
-xset s noblank
-
-# Hide cursor
-unclutter -idle 0 &
-
-# Start Chromium in kiosk mode
-chromium-browser \
-    --kiosk \
-    --noerrdialogs \
-    --disable-infobars \
-    --disable-session-crashed-bubble \
-    --disable-restore-session-state \
-    --no-first-run \
-    --start-fullscreen \
-    --disable-translate \
-    --disable-features=TranslateUI \
-    --autoplay-policy=no-user-gesture-required \
-    /home/pi/xentauri_pi_screen/index.html
+sudo systemctl start xentauri-screen
 ```
 
-Make executable:
-```bash
-chmod +x /home/pi/start_xentauri.sh
-```
+#### 5. Open Browser
 
-#### 6. Configure Auto-Start
+Navigate to `http://localhost:8080` and enter the pairing code.
 
-Create `/home/pi/.xinitrc`:
-
-```bash
-#!/bin/bash
-exec /home/pi/start_xentauri.sh
-```
-
-Create `~/.bash_profile`:
-
-```bash
-if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
-    startx
-fi
-```
-
-#### 7. Enable Auto-Login
-
-```bash
-sudo raspi-config
-# System Options > Boot / Auto Login > Console Autologin
-```
-
-#### 8. Reboot
+#### 6. Enable Kiosk Mode (Auto-boot)
 
 ```bash
 sudo reboot
 ```
+
+After reboot, Chromium opens in fullscreen automatically.
+
+---
 
 ## File Structure
 
 ```
 xentauri_pi_screen/
 ├── index.html              # Main entry point
+├── start.sh                # Development server script
+├── setup-pi.sh             # Raspberry Pi setup script
+├── kiosk.sh                # Kiosk mode launcher
 ├── css/
 │   ├── main.css            # Base styles
 │   ├── components.css      # Component-specific styles
 │   └── themes.css          # Theme configuration
 ├── js/
-│   ├── config.js           # Configuration (AGENT_ID, URLs)
+│   ├── config.js           # Configuration (URLs, settings)
 │   ├── app.js              # Main application controller
+│   ├── pairing/
+│   │   └── service.js      # Pairing API client
 │   ├── websocket/
 │   │   └── client.js       # WebSocket connection manager
 │   ├── renderer/
@@ -167,19 +164,22 @@ xentauri_pi_screen/
 └── README.md
 ```
 
-## Configuration Options
+---
+
+## Configuration
 
 Edit `js/config.js`:
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `AGENT_ID` | Device agent ID (required) | - |
 | `BACKEND_URL` | Backend server URL | `https://xentauri-cloud-core.fly.dev` |
 | `HEARTBEAT_INTERVAL` | Heartbeat frequency (ms) | `30000` |
 | `CLOCK_FORMAT` | Clock display format | `'12h'` |
 | `WEATHER_UNITS` | Temperature units | `'fahrenheit'` |
 | `DEBUG` | Enable debug logging | `true` |
 | `PERSIST_CONTENT` | Save state for restore | `true` |
+
+---
 
 ## Supported Components
 
@@ -206,7 +206,9 @@ Edit `js/config.js`:
 - `doc_summary` - Document summary with AI content
 - `doc_preview` - Document preview
 
-## Keyboard Shortcuts (Development)
+---
+
+## Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
@@ -214,6 +216,9 @@ Edit `js/config.js`:
 | `F` | Toggle fullscreen |
 | `R` | Force WebSocket reconnect |
 | `D` | Log debug info to console |
+| `Shift+U` | Unpair device |
+
+---
 
 ## WebSocket Protocol
 
@@ -245,26 +250,32 @@ Edit `js/config.js`:
 { "type": "heartbeat" }
 ```
 
+---
+
 ## Troubleshooting
 
-### Connection Issues
+### WebSocket Connection Fails
 
-1. Verify `AGENT_ID` is correct in `config.js`
-2. Check network connectivity: `ping xentauri-cloud-core.fly.dev`
-3. Open browser console to see connection logs
-4. Verify device is paired in the backend
+**Error:** `WebSocket opening handshake timed out`
 
-### Display Issues
+**Cause:** Opening `index.html` directly as `file://`
 
-1. Check Chromium is installed: `chromium-browser --version`
-2. Verify X11 is running: `echo $DISPLAY`
-3. Check file permissions on scripts
-
-### Screen Blanking
-
-If the screen goes blank:
+**Solution:** Use the web server:
 ```bash
-# Add to startup script
+./start.sh
+# Then open http://localhost:8080
+```
+
+### Pairing Code Invalid
+
+1. Make sure the code is exactly 6 characters
+2. Codes expire after 15 minutes - generate a new one
+3. Check network connectivity to backend
+
+### Screen Goes Blank
+
+```bash
+# Add to kiosk.sh or startup
 xset s off
 xset -dpms
 xset s noblank
@@ -272,20 +283,40 @@ xset s noblank
 
 ### Cursor Visible
 
-Install and run unclutter:
 ```bash
 sudo apt install unclutter
-unclutter -idle 0 &
+unclutter -idle 0.1 -root &
 ```
 
-## Development
+### Check Service Status
 
-To test locally without a Pi:
+```bash
+sudo systemctl status xentauri-screen
+journalctl -u xentauri-screen -f
+```
 
-1. Open `index.html` in Chrome
-2. Open DevTools (F12) to see logs
-3. The connection overlay will show status
-4. Use keyboard shortcuts for testing
+---
+
+## Service Management
+
+```bash
+# Start service
+sudo systemctl start xentauri-screen
+
+# Stop service
+sudo systemctl stop xentauri-screen
+
+# Restart service
+sudo systemctl restart xentauri-screen
+
+# Check status
+sudo systemctl status xentauri-screen
+
+# View logs
+journalctl -u xentauri-screen -f
+```
+
+---
 
 ## License
 
@@ -293,4 +324,4 @@ This is part of the Xentauri project.
 
 ---
 
-*Last updated: December 2025*
+*Last updated: January 2026*
