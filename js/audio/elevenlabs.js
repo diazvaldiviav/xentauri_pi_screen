@@ -16,6 +16,71 @@ const ElevenLabsService = {
     activeSpeakId: null,
     cancelledIds: new Set(),
 
+    // Audio unlock state (for browsers that require user interaction)
+    audioUnlocked: false,
+    pendingScene: null,
+
+    // -------------------------------------------------------------------------
+    // Initialization & Audio Unlock
+    // -------------------------------------------------------------------------
+
+    /**
+     * Initialize the service and set up audio unlock listeners.
+     * Call this once on page load.
+     */
+    init() {
+        if (this.audioUnlocked) return;
+
+        // Try to unlock audio immediately (works with --autoplay-policy flag)
+        this.tryUnlockAudio();
+
+        // Set up listeners for user interaction to unlock audio
+        const unlockEvents = ['click', 'touchstart', 'keydown'];
+        const unlockHandler = () => {
+            this.tryUnlockAudio();
+            // Remove listeners after unlock
+            if (this.audioUnlocked) {
+                unlockEvents.forEach(event => {
+                    document.removeEventListener(event, unlockHandler);
+                });
+            }
+        };
+
+        unlockEvents.forEach(event => {
+            document.addEventListener(event, unlockHandler, { once: false });
+        });
+
+        console.log('[ElevenLabs] Service initialized, waiting for audio unlock');
+    },
+
+    /**
+     * Try to unlock audio by playing a silent sound.
+     */
+    tryUnlockAudio() {
+        if (this.audioUnlocked) return;
+
+        // Create a short silent audio to test autoplay
+        const audio = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwmHAAAAAAD/+1DEAAAGAAGn9AAAIAAANIAAAARMQwDAAAANIAAAAQbMEP/hIQQ/5CAv/4SEDv/KAgd/4JCB3/8ub/+XP5c//y5//lz+XP/8uf/5c/lz//Ln/+XAAAAAAAAATEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tQxB4AAADSAAAAAAAAANIAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
+
+        audio.volume = 0.01;
+        audio.play()
+            .then(() => {
+                this.audioUnlocked = true;
+                console.log('[ElevenLabs] Audio unlocked successfully');
+                audio.pause();
+
+                // If there's a pending scene, narrate it now
+                if (this.pendingScene) {
+                    const scene = this.pendingScene;
+                    this.pendingScene = null;
+                    this.narrateScene(scene);
+                }
+            })
+            .catch((err) => {
+                console.log('[ElevenLabs] Audio locked, waiting for user interaction');
+            });
+    },
+
     // -------------------------------------------------------------------------
     // Configuration Check
     // -------------------------------------------------------------------------
@@ -443,6 +508,14 @@ const ElevenLabsService = {
      */
     async narrateScene(scene) {
         if (!this.isEnabled()) {
+            return -1;
+        }
+
+        // If audio is locked, store scene for later
+        if (!this.audioUnlocked) {
+            console.log('[ElevenLabs] Audio locked, storing scene for later narration');
+            this.pendingScene = scene;
+            this.tryUnlockAudio();
             return -1;
         }
 

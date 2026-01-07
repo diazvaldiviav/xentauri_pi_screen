@@ -49,6 +49,11 @@ const XentauriApp = {
         // Initialize scene renderer
         SceneRenderer.init(this.elements.displayContainer);
 
+        // Initialize Eleven Labs TTS (audio unlock)
+        if (window.ElevenLabsService) {
+            ElevenLabsService.init();
+        }
+
         // Check if already paired
         if (isPaired()) {
             console.log('[Xentauri App] Device is paired, connecting...');
