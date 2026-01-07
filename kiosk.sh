@@ -44,6 +44,7 @@ chromium-browser \
     --fast \
     --fast-start \
     --disable-features=TranslateUI \
+    --autoplay-policy=no-user-gesture-required \
     "$URL"
 
 # When Chromium closes, stop the server
