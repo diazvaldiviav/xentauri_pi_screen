@@ -362,3 +362,22 @@ body {
 .error {
     color: #ff6b6b;
 }
+
+/* -----------------------------------------------------------------------------
+   Custom Layout Iframe (Sprint 5.2 - GPT-5.2 HTML)
+   ----------------------------------------------------------------------------- */
+.custom-layout-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    display: block;
+}
+
+.display-container .custom-layout-iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}

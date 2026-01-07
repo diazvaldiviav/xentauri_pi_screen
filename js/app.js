@@ -358,10 +358,38 @@ const XentauriApp = {
 
     /**
      * Handle display_scene command.
+     * Sprint 5.2: Supports custom_layout (GPT-5.2 HTML) with SceneGraph fallback.
+     * Sprint 5.2.1: Supports TTS narration via Eleven Labs.
      */
     handleDisplayScene(params) {
         const scene = params?.scene;
+        const customLayout = params?.custom_layout;
 
+        // Custom layout takes priority if available
+        if (customLayout) {
+            console.log('[Xentauri App] Rendering custom HTML layout (GPT-5.2)');
+
+            // Render custom layout with scene as fallback
+            const success = SceneRenderer.renderCustomLayout(customLayout, scene);
+
+            if (success) {
+                // Save state for persistence
+                if (CONFIG.PERSIST_CONTENT) {
+                    this.saveState('custom_layout', { customLayout, scene });
+                }
+
+                // Narrate scene content via TTS (uses scene data, not HTML)
+                if (scene && CONFIG.ELEVENLABS?.AUTO_NARRATE) {
+                    this.narrateScene(scene);
+                }
+                return;
+            }
+
+            // Custom layout failed, fall through to scene rendering
+            console.log('[Xentauri App] Custom layout failed, falling back to SceneGraph');
+        }
+
+        // SceneGraph fallback
         if (!scene) {
             console.error('[Xentauri App] display_scene: No scene data');
             return;
@@ -375,6 +403,11 @@ const XentauriApp = {
         // Save state for persistence
         if (CONFIG.PERSIST_CONTENT) {
             this.saveState('scene', scene);
+        }
+
+        // Narrate scene content via TTS
+        if (CONFIG.ELEVENLABS?.AUTO_NARRATE) {
+            this.narrateScene(scene);
         }
     },
 
@@ -444,6 +477,34 @@ const XentauriApp = {
     },
 
     // -------------------------------------------------------------------------
+    // TTS Narration (Eleven Labs)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Narrate a scene using Eleven Labs TTS (streaming).
+     * @param {Object} scene - Scene data to narrate
+     */
+    async narrateScene(scene) {
+        if (!window.ElevenLabsService) {
+            console.log('[Xentauri App] ElevenLabsService not available');
+            return;
+        }
+
+        if (!ElevenLabsService.isEnabled()) {
+            console.log('[Xentauri App] TTS is disabled or not configured');
+            return;
+        }
+
+        try {
+            console.log('[Xentauri App] Starting TTS narration (streaming)...');
+            await ElevenLabsService.narrateScene(scene);
+            console.log('[Xentauri App] TTS narration completed');
+        } catch (error) {
+            console.error('[Xentauri App] TTS narration error:', error);
+        }
+    },
+
+    // -------------------------------------------------------------------------
     // State Persistence
     // -------------------------------------------------------------------------
 
@@ -456,6 +517,7 @@ const XentauriApp = {
 
     /**
      * Restore state from localStorage.
+     * Sprint 5.2: Also restores custom_layout states.
      */
     restoreState() {
         const saved = Helpers.loadFromStorage(CONFIG.STORAGE_KEY);
@@ -464,7 +526,13 @@ const XentauriApp = {
 
         console.log('[Xentauri App] Restoring saved state:', saved.type);
 
-        if (saved.type === 'scene' && saved.data) {
+        if (saved.type === 'custom_layout' && saved.data?.customLayout) {
+            // Restore custom layout with scene fallback
+            const success = SceneRenderer.renderCustomLayout(saved.data.customLayout, saved.data.scene);
+            if (!success && saved.data.scene) {
+                SceneRenderer.render(saved.data.scene);
+            }
+        } else if (saved.type === 'scene' && saved.data) {
             SceneRenderer.render(saved.data);
         } else if (saved.type === 'content' && saved.data?.url) {
             this.handleShowContent(saved.data);

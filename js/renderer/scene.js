@@ -10,6 +10,9 @@ const SceneRenderer = {
     // Current scene reference
     currentScene: null,
 
+    // Current custom layout HTML (Sprint 5.2)
+    currentCustomLayout: null,
+
     // Container element
     container: null,
 
@@ -97,7 +100,7 @@ const SceneRenderer = {
     },
 
     /**
-     * Clear the current scene.
+     * Clear the current scene or custom layout.
      */
     clear() {
         if (this.container) {
@@ -113,6 +116,7 @@ const SceneRenderer = {
             this.container.innerHTML = '';
         }
         this.currentScene = null;
+        this.currentCustomLayout = null;
     },
 
     // -------------------------------------------------------------------------
@@ -237,6 +241,103 @@ const SceneRenderer = {
         // Unknown component type
         Helpers.debug('SceneRenderer', `Unknown component type: ${type}`);
         return ComponentRenderers.unknown(type);
+    },
+
+    // -------------------------------------------------------------------------
+    // Idle Screen
+    // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    // Custom Layout Rendering (Sprint 5.2 - GPT-5.2 HTML)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Render custom HTML layout from GPT-5.2.
+     * Uses sandboxed iframe for security (no script execution).
+     *
+     * @param {string} html - HTML string from GPT-5.2
+     * @param {Object} sceneFallback - Scene to use if custom layout fails
+     * @returns {boolean} True if rendering succeeded
+     */
+    renderCustomLayout(html, sceneFallback = null) {
+        if (!this.container) {
+            console.error('[SceneRenderer] Container not initialized');
+            return false;
+        }
+
+        if (!html || typeof html !== 'string') {
+            console.error('[SceneRenderer] Invalid HTML provided');
+            return false;
+        }
+
+        Helpers.debug('SceneRenderer', 'Rendering custom layout', {
+            htmlLength: html.length,
+            hasFallback: !!sceneFallback
+        });
+
+        // Clear current content
+        this.clear();
+
+        // Create sandboxed iframe
+        const iframe = document.createElement('iframe');
+        iframe.id = 'custom-layout-frame';
+        iframe.className = 'custom-layout-iframe';
+
+        // Full viewport sizing
+        iframe.style.cssText = `
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        `;
+
+        // SECURITY: Sandbox blocks script execution and other dangerous capabilities
+        // allow-same-origin: Required for CSS to work properly
+        // Scripts, forms, popups, and navigation are all BLOCKED
+        iframe.sandbox = 'allow-same-origin';
+
+        // Store fallback scene for error handling
+        const fallbackScene = sceneFallback;
+        const self = this;
+
+        // Handle successful load
+        iframe.onload = function() {
+            Helpers.debug('SceneRenderer', 'Custom layout loaded successfully');
+        };
+
+        // Handle errors - fallback to SceneGraph if available
+        iframe.onerror = function(e) {
+            console.error('[SceneRenderer] Custom layout error:', e);
+            if (fallbackScene) {
+                console.log('[SceneRenderer] Falling back to SceneGraph');
+                self.render(fallbackScene);
+            }
+        };
+
+        // Set HTML content via srcdoc (no network request)
+        iframe.srcdoc = html;
+
+        // Add to container
+        this.container.appendChild(iframe);
+
+        // Store reference
+        this.currentCustomLayout = html;
+        this.currentScene = null; // Clear scene reference when using custom layout
+
+        Helpers.debug('SceneRenderer', 'Custom layout rendered in sandbox');
+        return true;
+    },
+
+    /**
+     * Check if a custom layout is currently displayed.
+     * @returns {boolean}
+     */
+    hasCustomLayout() {
+        return this.currentCustomLayout !== null;
     },
 
     // -------------------------------------------------------------------------

@@ -83,7 +83,44 @@ const CONFIG = {
     PERSIST_CONTENT: true,
 
     // Storage key for content state
-    STORAGE_KEY: 'xentauri_pi_screen'
+    STORAGE_KEY: 'xentauri_pi_screen',
+
+    // -------------------------------------------------------------------------
+    // Eleven Labs TTS Configuration
+    // -------------------------------------------------------------------------
+    ELEVENLABS: {
+        // Enable/disable TTS narration
+        ENABLED: true,
+
+        // API Key (configure on device)
+        API_KEY: '',
+
+        // Voice ID (configure on device)
+        VOICE_ID: '',
+
+        // Model ID for multilingual support
+        MODEL_ID: 'eleven_multilingual_v2',
+
+        // Voice settings for educational content
+        VOICE_SETTINGS: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+            style: 0.0,
+            use_speaker_boost: true
+        },
+
+        // Maximum text length to send (API limit is ~5000 chars)
+        MAX_TEXT_LENGTH: 5000,
+
+        // Remove emojis from text before speech (some voices handle them poorly)
+        REMOVE_EMOJIS: true,
+
+        // Auto-narrate scenes when they arrive
+        AUTO_NARRATE: true,
+
+        // Only narrate these component types (null = all)
+        NARRATE_COMPONENTS: null  // or ['text_block', 'doc_summary']
+    }
 };
 
 // -------------------------------------------------------------------------
@@ -146,6 +183,8 @@ window.isPaired = isPaired;
 Object.freeze(CONFIG);
 Object.freeze(CONFIG.RECONNECT);
 Object.freeze(CONFIG.LAYOUT);
+Object.freeze(CONFIG.ELEVENLABS);
+Object.freeze(CONFIG.ELEVENLABS.VOICE_SETTINGS);
 
 // Log configuration on load (debug mode only)
 if (CONFIG.DEBUG) {
@@ -155,6 +194,11 @@ if (CONFIG.DEBUG) {
         pairUrl: CONFIG.PAIR_URL,
         isPaired: isPaired(),
         agentId: getAgentId() || '(NOT PAIRED)',
-        debug: CONFIG.DEBUG
+        debug: CONFIG.DEBUG,
+        elevenLabs: {
+            enabled: CONFIG.ELEVENLABS.ENABLED,
+            configured: Boolean(CONFIG.ELEVENLABS.API_KEY),
+            autoNarrate: CONFIG.ELEVENLABS.AUTO_NARRATE
+        }
     });
 }
