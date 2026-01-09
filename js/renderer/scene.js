@@ -248,14 +248,15 @@ const SceneRenderer = {
     // -------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
-    // Custom Layout Rendering (Sprint 5.2 - GPT-5.2 HTML)
+    // Custom Layout Rendering (Sprint 5.2)
     // -------------------------------------------------------------------------
 
     /**
-     * Render custom HTML layout from GPT-5.2.
-     * Uses sandboxed iframe for security (no script execution).
+     * Render custom HTML layout.
+     * DEMO MODE: Uses innerHTML for full JS support.
+     * WARNING: Not secure for production - enables XSS.
      *
-     * @param {string} html - HTML string from GPT-5.2
+     * @param {string} html - HTML string from Opus
      * @param {Object} sceneFallback - Scene to use if custom layout fails
      * @returns {boolean} True if rendering succeeded
      */
@@ -270,7 +271,7 @@ const SceneRenderer = {
             return false;
         }
 
-        Helpers.debug('SceneRenderer', 'Rendering custom layout', {
+        Helpers.debug('SceneRenderer', 'Rendering custom layout (DEMO MODE - JS enabled)', {
             htmlLength: html.length,
             hasFallback: !!sceneFallback
         });
@@ -278,57 +279,64 @@ const SceneRenderer = {
         // Clear current content
         this.clear();
 
-        // Create sandboxed iframe
-        const iframe = document.createElement('iframe');
-        iframe.id = 'custom-layout-frame';
-        iframe.className = 'custom-layout-iframe';
-
-        // Full viewport sizing
-        iframe.style.cssText = `
+        // Create wrapper for the custom layout
+        const wrapper = document.createElement('div');
+        wrapper.id = 'custom-layout-wrapper';
+        wrapper.style.cssText = `
             width: 100%;
             height: 100%;
-            border: none;
-            background: transparent;
-            display: block;
             position: absolute;
             top: 0;
             left: 0;
+            overflow: hidden;
         `;
 
-        // SECURITY: Sandbox blocks script execution and other dangerous capabilities
-        // allow-same-origin: Required for CSS to work properly
-        // Scripts, forms, popups, and navigation are all BLOCKED
-        iframe.sandbox = 'allow-same-origin';
+        // Extract body content if full HTML document
+        let contentHtml = html;
 
-        // Store fallback scene for error handling
-        const fallbackScene = sceneFallback;
-        const self = this;
+        // If it's a full HTML document, extract just the body and styles
+        if (html.toLowerCase().includes('<!doctype') || html.toLowerCase().includes('<html')) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
 
-        // Handle successful load
-        iframe.onload = function() {
-            Helpers.debug('SceneRenderer', 'Custom layout loaded successfully');
-        };
+            // Get all styles
+            const styles = doc.querySelectorAll('style');
+            let styleContent = '';
+            styles.forEach(style => {
+                styleContent += style.outerHTML;
+            });
 
-        // Handle errors - fallback to SceneGraph if available
-        iframe.onerror = function(e) {
-            console.error('[SceneRenderer] Custom layout error:', e);
-            if (fallbackScene) {
-                console.log('[SceneRenderer] Falling back to SceneGraph');
-                self.render(fallbackScene);
+            // Get body content
+            const bodyContent = doc.body ? doc.body.innerHTML : html;
+
+            // Combine styles + body
+            contentHtml = styleContent + bodyContent;
+        }
+
+        // DEMO MODE: Direct innerHTML injection (enables JS)
+        // WARNING: This is NOT secure - only for demo purposes
+        wrapper.innerHTML = contentHtml;
+
+        // Execute any scripts in the content
+        const scripts = wrapper.querySelectorAll('script');
+        scripts.forEach(oldScript => {
+            const newScript = document.createElement('script');
+            if (oldScript.src) {
+                newScript.src = oldScript.src;
+            } else {
+                newScript.textContent = oldScript.textContent;
             }
-        };
-
-        // Set HTML content via srcdoc (no network request)
-        iframe.srcdoc = html;
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
 
         // Add to container
-        this.container.appendChild(iframe);
+        this.container.appendChild(wrapper);
 
         // Store reference
         this.currentCustomLayout = html;
-        this.currentScene = null; // Clear scene reference when using custom layout
+        this.currentScene = null;
 
-        Helpers.debug('SceneRenderer', 'Custom layout rendered in sandbox');
+        Helpers.debug('SceneRenderer', 'Custom layout rendered (DEMO MODE)');
         return true;
     },
 
