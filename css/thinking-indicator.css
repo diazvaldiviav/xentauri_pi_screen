@@ -1,0 +1,654 @@
+/**
+ * Xentauri Thinking Indicator - CSS
+ * Optimized for Raspberry Pi + Chromium
+ *
+ * Optimizations:
+ * - GPU-accelerated transforms (translate, scale, opacity)
+ * - Reduced box-shadow usage (expensive on Pi)
+ * - will-change hints for critical animations
+ * - Simplified particle system
+ * - CSS variables for easy theming
+ */
+
+/* ============================================================================
+   CSS VARIABLES
+   ============================================================================ */
+
+:root {
+  /* Base colors */
+  --xti-bg: hsl(230, 25%, 7%);
+  --xti-fg: hsl(210, 40%, 98%);
+  --xti-card-bg: hsla(230, 25%, 10%, 0.85);
+  --xti-muted: hsl(230, 20%, 18%);
+  --xti-muted-fg: hsl(215, 20%, 65%);
+  --xti-border: hsl(230, 20%, 20%);
+  --xti-destructive: hsl(0, 84%, 60%);
+
+  /* Phase colors */
+  --xti-cyan: hsl(190, 100%, 50%);
+  --xti-purple: hsl(252, 76%, 60%);
+  --xti-green: hsl(152, 100%, 50%);
+  --xti-orange: hsl(32, 100%, 50%);
+
+  /* Current phase color (updated via JS class) */
+  --xti-phase-color: var(--xti-cyan);
+  --xti-phase-color-rgb: 0, 200, 255;
+
+  /* Timing */
+  --xti-transition-fast: 150ms;
+  --xti-transition-normal: 300ms;
+  --xti-transition-slow: 500ms;
+
+  /* ==========================================
+     RESPONSIVE SCALE VARIABLES (TV optimized)
+     ========================================== */
+  --xti-scale: 1;
+  --xti-container-width: 420px;
+  --xti-card-padding: 1.5rem;
+  --xti-mascot-size: 120px;
+  --xti-glow-size: 140px;
+  --xti-mascot-section-height: 140px;
+  --xti-message-font-size: 1.125rem;
+  --xti-message-line-height: 1.5;
+  --xti-lang-font-size: 0.75rem;
+  --xti-progress-height: 8px;
+  --xti-tip-font-size: 0.875rem;
+  --xti-tip-icon-size: 16px;
+  --xti-time-font-size: 0.875rem;
+  --xti-dot-size: 6px;
+  --xti-particle-size: 4px;
+  --xti-cancel-font-size: 0.875rem;
+  --xti-cancel-padding: 0.375rem 0.75rem;
+}
+
+/* ============================================================================
+   FULLSCREEN OVERLAY
+   ============================================================================ */
+
+.xti-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--xti-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity var(--xti-transition-slow) ease-out;
+}
+
+.xti-overlay.xti-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ============================================================================
+   CONTAINER & CARD
+   ============================================================================ */
+
+.xti-container {
+  width: 100%;
+  max-width: var(--xti-container-width);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--xti-transition-slow) ease-out,
+              transform var(--xti-transition-slow) ease-out;
+  will-change: opacity, transform;
+}
+
+.xti-container.xti-hidden {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.xti-container.xti-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.xti-card {
+  position: relative;
+  overflow: hidden;
+  padding: var(--xti-card-padding);
+  border-radius: calc(1rem * var(--xti-scale));
+  border: 1px solid var(--xti-border);
+  background: var(--xti-card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: border-color var(--xti-transition-normal) ease;
+}
+
+/* Glow effect using pseudo-element (more efficient than box-shadow animation) */
+.xti-card::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(var(--xti-phase-color-rgb), 0.3) 0%,
+    transparent 70%
+  );
+  opacity: 0.5;
+  z-index: -1;
+  transition: opacity var(--xti-transition-slow) ease;
+  will-change: opacity;
+}
+
+/* Phase-specific colors */
+.xti-phase-preparing {
+  --xti-phase-color: var(--xti-cyan);
+  --xti-phase-color-rgb: 0, 200, 255;
+  --xti-gradient-from: var(--xti-cyan);
+  --xti-gradient-to: var(--xti-purple);
+}
+
+.xti-phase-analyzing {
+  --xti-phase-color: var(--xti-purple);
+  --xti-phase-color-rgb: 124, 92, 239;
+  --xti-gradient-from: var(--xti-purple);
+  --xti-gradient-to: var(--xti-cyan);
+}
+
+.xti-phase-designing {
+  --xti-phase-color: var(--xti-green);
+  --xti-phase-color-rgb: 0, 255, 128;
+  --xti-gradient-from: var(--xti-green);
+  --xti-gradient-to: var(--xti-cyan);
+}
+
+/* ============================================================================
+   PARTICLES (Reduced for Pi performance)
+   ============================================================================ */
+
+.xti-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.xti-particle {
+  position: absolute;
+  width: var(--xti-particle-size);
+  height: var(--xti-particle-size);
+  border-radius: 50%;
+  background: var(--xti-phase-color);
+  opacity: 0;
+  transform: scale(0.5);
+  animation: xti-particle-pulse var(--duration, 3s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: opacity, transform;
+}
+
+@keyframes xti-particle-pulse {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+}
+
+/* ============================================================================
+   MASCOT SECTION
+   ============================================================================ */
+
+.xti-mascot-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: calc(1.25rem * var(--xti-scale));
+  position: relative;
+  height: var(--xti-mascot-section-height);
+}
+
+.xti-glow-ring {
+  position: absolute;
+  width: var(--xti-glow-size);
+  height: var(--xti-glow-size);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(var(--xti-phase-color-rgb), 0.2) 0%,
+    transparent 70%
+  );
+  animation: xti-glow-pulse 2s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+@keyframes xti-glow-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.15);
+  }
+}
+
+.xti-mascot-container {
+  position: relative;
+  z-index: 10;
+  transition: transform var(--xti-transition-fast) ease-out;
+}
+
+.xti-mascot-container.xti-phase-bounce {
+  animation: xti-bounce 0.3s ease-out;
+}
+
+@keyframes xti-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.xti-mascot-float {
+  animation: xti-float 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes xti-float {
+  0%, 100% { transform: translateY(calc(-8px * var(--xti-scale))); }
+  50% { transform: translateY(calc(8px * var(--xti-scale))); }
+}
+
+.xti-mascot-image {
+  width: var(--xti-mascot-size);
+  height: var(--xti-mascot-size);
+  object-fit: contain;
+}
+
+.xti-mascot-float svg {
+  width: var(--xti-mascot-size);
+  height: var(--xti-mascot-size);
+}
+
+/* ============================================================================
+   MESSAGE SECTION
+   ============================================================================ */
+
+.xti-message-section {
+  text-align: center;
+  margin-bottom: calc(1rem * var(--xti-scale));
+  min-height: calc(60px * var(--xti-scale));
+}
+
+.xti-message-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(0.25rem * var(--xti-scale));
+}
+
+.xti-message-text {
+  color: var(--xti-fg);
+  font-weight: 500;
+  font-size: var(--xti-message-font-size);
+  line-height: var(--xti-message-line-height);
+  margin: 0;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--xti-transition-fast) ease,
+              transform var(--xti-transition-fast) ease;
+}
+
+.xti-message-text.xti-fade-out {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.xti-message-lang {
+  font-size: var(--xti-lang-font-size);
+  color: var(--xti-muted-fg);
+  background: hsla(230, 20%, 18%, 0.5);
+  padding: calc(0.125rem * var(--xti-scale)) calc(0.5rem * var(--xti-scale));
+  border-radius: calc(0.25rem * var(--xti-scale));
+  opacity: 1;
+  transition: opacity var(--xti-transition-fast) ease;
+}
+
+.xti-message-lang.xti-fade-out {
+  opacity: 0;
+}
+
+/* ============================================================================
+   PROGRESS BAR
+   ============================================================================ */
+
+.xti-progress-section {
+  margin-bottom: calc(1rem * var(--xti-scale));
+}
+
+.xti-progress-track {
+  height: var(--xti-progress-height);
+  background: hsla(230, 20%, 18%, 0.5);
+  border-radius: 9999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.xti-progress-bar {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--xti-gradient-from),
+    var(--xti-gradient-to)
+  );
+  width: 0%;
+  transition: width 0.3s ease-out;
+  will-change: width;
+}
+
+.xti-progress-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: xti-shimmer 1.5s linear infinite;
+  will-change: transform;
+}
+
+@keyframes xti-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+.xti-progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-top: calc(0.25rem * var(--xti-scale));
+}
+
+.xti-progress-label span {
+  font-size: var(--xti-lang-font-size);
+  color: var(--xti-muted-fg);
+}
+
+/* ============================================================================
+   FOOTER
+   ============================================================================ */
+
+.xti-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.xti-footer-left {
+  display: flex;
+  align-items: center;
+  gap: calc(0.75rem * var(--xti-scale));
+}
+
+/* Loading dots */
+.xti-dots {
+  display: flex;
+  align-items: center;
+  gap: calc(4px * var(--xti-scale));
+}
+
+.xti-dot {
+  width: var(--xti-dot-size);
+  height: var(--xti-dot-size);
+  border-radius: 50%;
+  background: var(--xti-phase-color);
+  animation: xti-dot-pulse 0.8s ease-in-out infinite;
+  animation-delay: var(--dot-delay, 0s);
+  will-change: opacity, transform;
+}
+
+@keyframes xti-dot-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Speed up dots in later phases */
+.xti-phase-designing .xti-dot {
+  animation-duration: 0.5s;
+}
+
+/* Time */
+.xti-time {
+  font-size: var(--xti-time-font-size);
+  color: var(--xti-muted-fg);
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* ============================================================================
+   PERFORMANCE HINTS
+   ============================================================================ */
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .xti-mascot-float,
+  .xti-glow-ring,
+  .xti-particle,
+  .xti-dot,
+  .xti-progress-shimmer {
+    animation: none;
+  }
+
+  .xti-mascot-float {
+    transform: none;
+  }
+
+  .xti-glow-ring {
+    opacity: 0.5;
+  }
+
+  .xti-particle {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+
+  .xti-dot {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Low performance mode - add class 'xti-low-perf' to container */
+.xti-low-perf .xti-particles,
+.xti-low-perf .xti-progress-shimmer,
+.xti-low-perf .xti-card::before {
+  display: none;
+}
+
+.xti-low-perf .xti-glow-ring {
+  animation: none;
+  opacity: 0.4;
+}
+
+/* ============================================================================
+   TV / LARGE SCREEN BREAKPOINTS
+   Optimized for viewing distance of ~3 meters
+   ============================================================================ */
+
+/* HD Ready (1280x720) */
+@media (min-width: 1280px) and (min-height: 720px) {
+  :root {
+    --xti-scale: 1.5;
+    --xti-container-width: 600px;
+    --xti-card-padding: 2rem;
+    --xti-mascot-size: 180px;
+    --xti-glow-size: 210px;
+    --xti-mascot-section-height: 210px;
+    --xti-message-font-size: 1.5rem;
+    --xti-lang-font-size: 1rem;
+    --xti-progress-height: 12px;
+    --xti-tip-font-size: 1.125rem;
+    --xti-tip-icon-size: 24px;
+    --xti-time-font-size: 1.125rem;
+    --xti-dot-size: 10px;
+    --xti-particle-size: 6px;
+    --xti-cancel-font-size: 1.125rem;
+    --xti-cancel-padding: 0.5rem 1rem;
+  }
+}
+
+/* Full HD (1920x1080) - Most common TV resolution */
+@media (min-width: 1920px) and (min-height: 1080px) {
+  :root {
+    --xti-scale: 2;
+    --xti-container-width: 800px;
+    --xti-card-padding: 2.5rem;
+    --xti-mascot-size: 240px;
+    --xti-glow-size: 280px;
+    --xti-mascot-section-height: 280px;
+    --xti-message-font-size: 2rem;
+    --xti-lang-font-size: 1.25rem;
+    --xti-progress-height: 16px;
+    --xti-tip-font-size: 1.5rem;
+    --xti-tip-icon-size: 32px;
+    --xti-time-font-size: 1.5rem;
+    --xti-dot-size: 12px;
+    --xti-particle-size: 8px;
+    --xti-cancel-font-size: 1.5rem;
+    --xti-cancel-padding: 0.75rem 1.5rem;
+  }
+}
+
+/* QHD / 1440p */
+@media (min-width: 2560px) and (min-height: 1440px) {
+  :root {
+    --xti-scale: 2.5;
+    --xti-container-width: 1000px;
+    --xti-card-padding: 3rem;
+    --xti-mascot-size: 300px;
+    --xti-glow-size: 350px;
+    --xti-mascot-section-height: 350px;
+    --xti-message-font-size: 2.5rem;
+    --xti-lang-font-size: 1.5rem;
+    --xti-progress-height: 20px;
+    --xti-tip-font-size: 1.75rem;
+    --xti-tip-icon-size: 40px;
+    --xti-time-font-size: 1.75rem;
+    --xti-dot-size: 16px;
+    --xti-particle-size: 10px;
+    --xti-cancel-font-size: 1.75rem;
+    --xti-cancel-padding: 1rem 2rem;
+  }
+}
+
+/* 4K UHD (3840x2160) */
+@media (min-width: 3840px) and (min-height: 2160px) {
+  :root {
+    --xti-scale: 3.5;
+    --xti-container-width: 1400px;
+    --xti-card-padding: 4rem;
+    --xti-mascot-size: 420px;
+    --xti-glow-size: 490px;
+    --xti-mascot-section-height: 490px;
+    --xti-message-font-size: 3.5rem;
+    --xti-lang-font-size: 2rem;
+    --xti-progress-height: 28px;
+    --xti-tip-font-size: 2.25rem;
+    --xti-tip-icon-size: 56px;
+    --xti-time-font-size: 2.25rem;
+    --xti-dot-size: 22px;
+    --xti-particle-size: 14px;
+    --xti-cancel-font-size: 2.25rem;
+    --xti-cancel-padding: 1.25rem 2.5rem;
+  }
+}
+
+/* ============================================================================
+   TV MODE CLASS (Alternative to media queries)
+   Add class to html element: <html class="xti-tv-1080p">
+   ============================================================================ */
+
+.xti-tv-720p {
+  --xti-scale: 1.5;
+  --xti-container-width: 600px;
+  --xti-card-padding: 2rem;
+  --xti-mascot-size: 180px;
+  --xti-glow-size: 210px;
+  --xti-mascot-section-height: 210px;
+  --xti-message-font-size: 1.5rem;
+  --xti-lang-font-size: 1rem;
+  --xti-progress-height: 12px;
+  --xti-tip-font-size: 1.125rem;
+  --xti-tip-icon-size: 24px;
+  --xti-time-font-size: 1.125rem;
+  --xti-dot-size: 10px;
+  --xti-particle-size: 6px;
+  --xti-cancel-font-size: 1.125rem;
+  --xti-cancel-padding: 0.5rem 1rem;
+}
+
+.xti-tv-1080p {
+  --xti-scale: 2;
+  --xti-container-width: 800px;
+  --xti-card-padding: 2.5rem;
+  --xti-mascot-size: 240px;
+  --xti-glow-size: 280px;
+  --xti-mascot-section-height: 280px;
+  --xti-message-font-size: 2rem;
+  --xti-lang-font-size: 1.25rem;
+  --xti-progress-height: 16px;
+  --xti-tip-font-size: 1.5rem;
+  --xti-tip-icon-size: 32px;
+  --xti-time-font-size: 1.5rem;
+  --xti-dot-size: 12px;
+  --xti-particle-size: 8px;
+  --xti-cancel-font-size: 1.5rem;
+  --xti-cancel-padding: 0.75rem 1.5rem;
+}
+
+.xti-tv-1440p {
+  --xti-scale: 2.5;
+  --xti-container-width: 1000px;
+  --xti-card-padding: 3rem;
+  --xti-mascot-size: 300px;
+  --xti-glow-size: 350px;
+  --xti-mascot-section-height: 350px;
+  --xti-message-font-size: 2.5rem;
+  --xti-lang-font-size: 1.5rem;
+  --xti-progress-height: 20px;
+  --xti-tip-font-size: 1.75rem;
+  --xti-tip-icon-size: 40px;
+  --xti-time-font-size: 1.75rem;
+  --xti-dot-size: 16px;
+  --xti-particle-size: 10px;
+  --xti-cancel-font-size: 1.75rem;
+  --xti-cancel-padding: 1rem 2rem;
+}
+
+.xti-tv-4k {
+  --xti-scale: 3.5;
+  --xti-container-width: 1400px;
+  --xti-card-padding: 4rem;
+  --xti-mascot-size: 420px;
+  --xti-glow-size: 490px;
+  --xti-mascot-section-height: 490px;
+  --xti-message-font-size: 3.5rem;
+  --xti-lang-font-size: 2rem;
+  --xti-progress-height: 28px;
+  --xti-tip-font-size: 2.25rem;
+  --xti-tip-icon-size: 56px;
+  --xti-time-font-size: 2.25rem;
+  --xti-dot-size: 22px;
+  --xti-particle-size: 14px;
+  --xti-cancel-font-size: 2.25rem;
+  --xti-cancel-padding: 1.25rem 2.5rem;
+}

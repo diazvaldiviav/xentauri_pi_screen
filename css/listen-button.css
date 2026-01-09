@@ -1,0 +1,243 @@
+/**
+ * Xentauri Listen Button - CSS
+ * Floating button to trigger TTS narration on demand
+ */
+
+/* ============================================================================
+   LISTEN BUTTON CONTAINER
+   ============================================================================ */
+
+.xti-listen-container {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.xti-listen-container.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* ============================================================================
+   LISTEN BUTTON
+   ============================================================================ */
+
+.xti-listen-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, hsl(252, 76%, 55%), hsl(190, 100%, 45%));
+  border: none;
+  border-radius: 50px;
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(124, 92, 239, 0.4);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.xti-listen-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 30px rgba(124, 92, 239, 0.5);
+}
+
+.xti-listen-button:active {
+  transform: scale(0.98);
+}
+
+.xti-listen-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* ============================================================================
+   BUTTON STATES
+   ============================================================================ */
+
+/* Loading state */
+.xti-listen-button.loading {
+  background: linear-gradient(135deg, hsl(32, 100%, 50%), hsl(45, 100%, 50%));
+  box-shadow: 0 4px 20px rgba(255, 165, 0, 0.4);
+}
+
+/* Playing state */
+.xti-listen-button.playing {
+  background: linear-gradient(135deg, hsl(152, 100%, 40%), hsl(190, 100%, 45%));
+  box-shadow: 0 4px 20px rgba(0, 255, 128, 0.4);
+}
+
+/* ============================================================================
+   BUTTON ICON
+   ============================================================================ */
+
+.xti-listen-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.xti-listen-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Loading spinner */
+.xti-listen-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: xti-spin 0.8s linear infinite;
+}
+
+@keyframes xti-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Sound wave animation for playing state */
+.xti-sound-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+}
+
+.xti-sound-bar {
+  width: 3px;
+  height: 100%;
+  background: white;
+  border-radius: 3px;
+  animation: xti-sound-wave 0.5s ease-in-out infinite;
+}
+
+.xti-sound-bar:nth-child(1) { animation-delay: 0s; }
+.xti-sound-bar:nth-child(2) { animation-delay: 0.1s; }
+.xti-sound-bar:nth-child(3) { animation-delay: 0.2s; }
+.xti-sound-bar:nth-child(4) { animation-delay: 0.3s; }
+
+@keyframes xti-sound-wave {
+  0%, 100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* ============================================================================
+   TV / LARGE SCREEN BREAKPOINTS
+   ============================================================================ */
+
+/* HD Ready (1280x720) */
+@media (min-width: 1280px) and (min-height: 720px) {
+  .xti-listen-container {
+    bottom: 3rem;
+    right: 3rem;
+  }
+
+  .xti-listen-button {
+    padding: 1.25rem 2rem;
+    font-size: 1.5rem;
+    gap: 1rem;
+  }
+
+  .xti-listen-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .xti-listen-spinner {
+    width: 28px;
+    height: 28px;
+  }
+
+  .xti-sound-wave {
+    height: 28px;
+  }
+
+  .xti-sound-bar {
+    width: 4px;
+  }
+}
+
+/* Full HD (1920x1080) */
+@media (min-width: 1920px) and (min-height: 1080px) {
+  .xti-listen-container {
+    bottom: 4rem;
+    right: 4rem;
+  }
+
+  .xti-listen-button {
+    padding: 1.5rem 2.5rem;
+    font-size: 1.75rem;
+    gap: 1.25rem;
+  }
+
+  .xti-listen-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .xti-listen-spinner {
+    width: 36px;
+    height: 36px;
+    border-width: 4px;
+  }
+
+  .xti-sound-wave {
+    height: 36px;
+  }
+
+  .xti-sound-bar {
+    width: 5px;
+  }
+}
+
+/* 4K UHD (3840x2160) */
+@media (min-width: 3840px) and (min-height: 2160px) {
+  .xti-listen-container {
+    bottom: 6rem;
+    right: 6rem;
+  }
+
+  .xti-listen-button {
+    padding: 2rem 3.5rem;
+    font-size: 2.5rem;
+    gap: 1.5rem;
+    border-radius: 80px;
+  }
+
+  .xti-listen-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .xti-listen-spinner {
+    width: 48px;
+    height: 48px;
+    border-width: 5px;
+  }
+
+  .xti-sound-wave {
+    height: 48px;
+    gap: 5px;
+  }
+
+  .xti-sound-bar {
+    width: 7px;
+  }
+}

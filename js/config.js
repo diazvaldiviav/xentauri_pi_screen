@@ -115,8 +115,8 @@ const CONFIG = {
         // Remove emojis from text before speech (some voices handle them poorly)
         REMOVE_EMOJIS: true,
 
-        // Auto-narrate scenes when they arrive
-        AUTO_NARRATE: true,
+        // Auto-narrate scenes when they arrive (disabled - use Listen button)
+        AUTO_NARRATE: false,
 
         // Only narrate these component types (null = all)
         NARRATE_COMPONENTS: null  // or ['text_block', 'doc_summary']

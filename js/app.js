@@ -10,6 +10,12 @@ const XentauriApp = {
     // WebSocket client
     ws: null,
 
+    // Thinking Indicator
+    thinkingIndicator: null,
+
+    // Listen Button (TTS on demand)
+    listenButton: null,
+
     // UI Elements
     elements: {
         connectionOverlay: null,
@@ -48,6 +54,22 @@ const XentauriApp = {
 
         // Initialize scene renderer
         SceneRenderer.init(this.elements.displayContainer);
+
+        // Initialize Thinking Indicator
+        if (window.ThinkingIndicator) {
+            this.thinkingIndicator = new ThinkingIndicator({
+                container: document.body
+            });
+            console.log('[Xentauri App] ThinkingIndicator initialized');
+        }
+
+        // Initialize Listen Button (TTS on demand)
+        if (window.ListenButton) {
+            this.listenButton = new ListenButton({
+                container: document.body
+            });
+            console.log('[Xentauri App] ListenButton initialized');
+        }
 
         // Initialize Eleven Labs TTS (audio unlock)
         if (window.ElevenLabsService) {
@@ -340,6 +362,10 @@ const XentauriApp = {
         console.log('[Xentauri App] Command:', cmd.commandType);
 
         switch (cmd.commandType) {
+            case 'loading_start':
+                this.handleLoadingStart(cmd.parameters);
+                break;
+
             case 'display_scene':
                 this.handleDisplayScene(cmd.parameters);
                 break;
@@ -362,11 +388,40 @@ const XentauriApp = {
     },
 
     /**
+     * Handle loading_start command - show thinking indicator.
+     * Sprint 5.2.3: Backend sends loading phases during content generation.
+     */
+    handleLoadingStart(params) {
+        const phase = params?.phase || 1;
+        const message = params?.message || 'Processing...';
+
+        console.log(`[Xentauri App] Loading phase ${phase}: ${message}`);
+
+        if (!this.thinkingIndicator) {
+            console.log('[Xentauri App] ThinkingIndicator not available');
+            return;
+        }
+
+        // Show or update phase
+        if (!this.thinkingIndicator.isVisible) {
+            this.thinkingIndicator.show(phase, message);
+        } else {
+            this.thinkingIndicator.setPhase(phase, message);
+        }
+    },
+
+    /**
      * Handle display_scene command.
      * Sprint 5.2: Supports custom_layout (GPT-5.2 HTML) with SceneGraph fallback.
-     * Sprint 5.2.1: Supports TTS narration via Eleven Labs.
+     * Sprint 5.2.3: Hides thinking indicator when content arrives.
+     * Sprint 5.2.4: Shows listen button for on-demand TTS narration.
      */
     handleDisplayScene(params) {
+        // Hide thinking indicator when content arrives
+        if (this.thinkingIndicator && this.thinkingIndicator.isVisible) {
+            this.thinkingIndicator.hide();
+        }
+
         const scene = params?.scene;
         const customLayout = params?.custom_layout;
 
@@ -383,9 +438,9 @@ const XentauriApp = {
                     this.saveState('custom_layout', { customLayout, scene });
                 }
 
-                // Narrate scene content via TTS (uses scene data, not HTML)
-                if (scene && CONFIG.ELEVENLABS?.AUTO_NARRATE) {
-                    this.narrateScene(scene);
+                // Show listen button for on-demand TTS (Sprint 5.2.4)
+                if (scene && this.listenButton) {
+                    this.listenButton.show(scene);
                 }
                 return;
             }
@@ -410,9 +465,9 @@ const XentauriApp = {
             this.saveState('scene', scene);
         }
 
-        // Narrate scene content via TTS
-        if (CONFIG.ELEVENLABS?.AUTO_NARRATE) {
-            this.narrateScene(scene);
+        // Show listen button for on-demand TTS (Sprint 5.2.4)
+        if (this.listenButton) {
+            this.listenButton.show(scene);
         }
     },
 
@@ -466,6 +521,11 @@ const XentauriApp = {
         console.log('[Xentauri App] Clearing content');
         SceneRenderer.clear();
         SceneRenderer.showIdleScreen();
+
+        // Hide listen button
+        if (this.listenButton) {
+            this.listenButton.hide();
+        }
 
         // Clear saved state
         if (CONFIG.PERSIST_CONTENT) {
