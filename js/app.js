@@ -36,7 +36,8 @@ const XentauriApp = {
         paired: false,
         connected: false,
         reconnecting: false,
-        pairing: false
+        pairing: false,
+        loadingTimeout: null  // Timer for loading timeout
     },
 
     // -------------------------------------------------------------------------
@@ -55,12 +56,14 @@ const XentauriApp = {
         // Initialize scene renderer
         SceneRenderer.init(this.elements.displayContainer);
 
-        // Initialize Thinking Indicator
+        // Initialize Thinking Indicator with countdown
         if (window.ThinkingIndicator) {
             this.thinkingIndicator = new ThinkingIndicator({
-                container: document.body
+                container: document.body,
+                timeoutDuration: CONFIG.LOADING_TIMEOUT,
+                countdownMode: true  // Show remaining time, not elapsed
             });
-            console.log('[Xentauri App] ThinkingIndicator initialized');
+            console.log('[Xentauri App] ThinkingIndicator initialized (countdown: 8 min)');
         }
 
         // Initialize Listen Button (TTS on demand)
@@ -402,12 +405,47 @@ const XentauriApp = {
             return;
         }
 
+        // Clear any existing loading timeout
+        if (this.state.loadingTimeout) {
+            clearTimeout(this.state.loadingTimeout);
+            this.state.loadingTimeout = null;
+        }
+
         // Show or update phase
         if (!this.thinkingIndicator.isVisible) {
             this.thinkingIndicator.show(phase, message);
+
+            // Set loading timeout (8 minutes by default)
+            this.state.loadingTimeout = setTimeout(() => {
+                console.log('[Xentauri App] Loading timeout reached');
+                this.handleLoadingTimeout();
+            }, CONFIG.LOADING_TIMEOUT);
+
+            console.log(`[Xentauri App] Loading timeout set: ${CONFIG.LOADING_TIMEOUT / 1000}s`);
         } else {
             this.thinkingIndicator.setPhase(phase, message);
         }
+    },
+
+    /**
+     * Handle loading timeout - content didn't arrive in time.
+     */
+    handleLoadingTimeout() {
+        console.log('[Xentauri App] Content generation timed out');
+
+        // Hide thinking indicator
+        if (this.thinkingIndicator && this.thinkingIndicator.isVisible) {
+            this.thinkingIndicator.hide();
+        }
+
+        // Clear timeout state
+        this.state.loadingTimeout = null;
+
+        // Show idle screen with timeout message
+        SceneRenderer.showIdleScreen();
+
+        // Log but don't show error - just return to idle state
+        console.log('[Xentauri App] Returned to idle after timeout');
     },
 
     /**
@@ -417,6 +455,13 @@ const XentauriApp = {
      * Sprint 5.2.4: Shows listen button for on-demand TTS narration.
      */
     handleDisplayScene(params) {
+        // Clear loading timeout - content arrived!
+        if (this.state.loadingTimeout) {
+            clearTimeout(this.state.loadingTimeout);
+            this.state.loadingTimeout = null;
+            console.log('[Xentauri App] Loading timeout cleared - content arrived');
+        }
+
         // Hide thinking indicator when content arrives
         if (this.thinkingIndicator && this.thinkingIndicator.isVisible) {
             this.thinkingIndicator.hide();

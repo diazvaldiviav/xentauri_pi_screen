@@ -299,15 +299,30 @@ const SceneRenderer = {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
 
-            // Get all styles
+            // Get all styles and transform selectors
             const styles = doc.querySelectorAll('style');
             let styleContent = '';
             styles.forEach(style => {
-                styleContent += style.outerHTML;
+                // Transform body/html selectors to target wrapper
+                let css = style.textContent;
+                css = this._transformCssSelectors(css);
+                styleContent += `<style>${css}</style>`;
             });
 
             // Get body content
             const bodyContent = doc.body ? doc.body.innerHTML : html;
+
+            // Get body inline styles and apply to wrapper
+            if (doc.body) {
+                const bodyStyle = doc.body.getAttribute('style');
+                if (bodyStyle) {
+                    wrapper.style.cssText += '; ' + bodyStyle;
+                }
+                // Copy body classes
+                if (doc.body.className) {
+                    wrapper.className = doc.body.className + ' custom-layout-wrapper';
+                }
+            }
 
             // Combine styles + body
             contentHtml = styleContent + bodyContent;
@@ -317,20 +332,67 @@ const SceneRenderer = {
         // WARNING: This is NOT secure - only for demo purposes
         wrapper.innerHTML = contentHtml;
 
+        // Add wrapper to DOM FIRST so scripts can find elements
+        this.container.appendChild(wrapper);
+
+        // Setup DOMContentLoaded interception BEFORE executing scripts
+        const domReadyCallbacks = [];
+        const originalAddEventListener = document.addEventListener.bind(document);
+        document.addEventListener = function(type, fn, options) {
+            if (type === 'DOMContentLoaded') {
+                domReadyCallbacks.push(fn);
+            } else {
+                originalAddEventListener(type, fn, options);
+            }
+        };
+
+        const windowOriginalAddEventListener = window.addEventListener.bind(window);
+        window.addEventListener = function(type, fn, options) {
+            if (type === 'load' || type === 'DOMContentLoaded') {
+                domReadyCallbacks.push(fn);
+            } else {
+                windowOriginalAddEventListener(type, fn, options);
+            }
+        };
+
         // Execute any scripts in the content
+        // NOTE: Using eval() instead of script replacement for reliable execution
         const scripts = wrapper.querySelectorAll('script');
         scripts.forEach(oldScript => {
-            const newScript = document.createElement('script');
             if (oldScript.src) {
+                // External scripts: load via new script tag
+                const newScript = document.createElement('script');
                 newScript.src = oldScript.src;
+                oldScript.parentNode.replaceChild(newScript, oldScript);
             } else {
-                newScript.textContent = oldScript.textContent;
+                // Inline scripts: execute via eval to preserve global scope
+                let jsCode = oldScript.textContent;
+                jsCode = jsCode.replace(/document\.body/g, "document.getElementById('custom-layout-wrapper')");
+                try {
+                    // Use indirect eval (1,eval) to run in GLOBAL scope
+                    // Direct eval() runs in local scope, indirect eval runs globally
+                    (1, eval)(jsCode);
+                } catch (e) {
+                    console.error('[SceneRenderer] Script execution error:', e);
+                    console.error('[SceneRenderer] Failed script preview:', jsCode.substring(0, 200));
+                }
+                // Remove old script tag
+                oldScript.remove();
             }
-            oldScript.parentNode.replaceChild(newScript, oldScript);
         });
 
-        // Add to container
-        this.container.appendChild(wrapper);
+        // Restore original addEventListener
+        document.addEventListener = originalAddEventListener;
+        window.addEventListener = windowOriginalAddEventListener;
+
+        // Execute captured DOMContentLoaded callbacks
+        domReadyCallbacks.forEach(fn => {
+            try {
+                fn();
+            } catch (e) {
+                console.error('[SceneRenderer] Error in DOMContentLoaded callback:', e);
+            }
+        });
 
         // Store reference
         this.currentCustomLayout = html;
@@ -338,6 +400,38 @@ const SceneRenderer = {
 
         Helpers.debug('SceneRenderer', 'Custom layout rendered (DEMO MODE)');
         return true;
+    },
+
+    /**
+     * Transform CSS selectors: body/html -> #custom-layout-wrapper
+     * @param {string} css - CSS string to transform
+     * @returns {string} Transformed CSS
+     */
+    _transformCssSelectors(css) {
+        // body { ... } -> #custom-layout-wrapper { ... }
+        css = css.replace(/\bbody\s*\{/gi, '#custom-layout-wrapper {');
+
+        // html { ... } -> #custom-layout-wrapper { ... }
+        css = css.replace(/\bhtml\s*\{/gi, '#custom-layout-wrapper {');
+
+        // html, body { ... } -> #custom-layout-wrapper { ... }
+        css = css.replace(/\bhtml\s*,\s*body\s*\{/gi, '#custom-layout-wrapper {');
+        css = css.replace(/\bbody\s*,\s*html\s*\{/gi, '#custom-layout-wrapper {');
+
+        // body.class or body#id -> #custom-layout-wrapper.class or #custom-layout-wrapper#id
+        css = css.replace(/\bbody([.#])/gi, '#custom-layout-wrapper$1');
+
+        // body > or body + or body ~ -> #custom-layout-wrapper > etc.
+        css = css.replace(/\bbody\s*([>+~])/gi, '#custom-layout-wrapper $1');
+
+        // body element (body div) -> #custom-layout-wrapper element
+        css = css.replace(/\bbody\s+(?=[a-z.*#\[])/gi, '#custom-layout-wrapper ');
+
+        // 100vh -> 100% (vh doesn't work correctly in nested context)
+        css = css.replace(/100vh/g, '100%');
+        css = css.replace(/100vw/g, '100%');
+
+        return css;
     },
 
     /**

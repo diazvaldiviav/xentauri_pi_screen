@@ -52,6 +52,10 @@ const CONFIG = {
     // Heartbeat interval (30 seconds)
     HEARTBEAT_INTERVAL: 30000,
 
+    // Loading timeout: maximum time to wait for content (8 minutes)
+    // After this time, show error instead of infinite loading
+    LOADING_TIMEOUT: 8 * 60 * 1000,  // 480000ms = 8 minutes
+
     // -------------------------------------------------------------------------
     // Display Settings
     // -------------------------------------------------------------------------

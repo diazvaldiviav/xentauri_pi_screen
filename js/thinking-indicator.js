@@ -111,6 +111,8 @@
     this.currentPhase = 1;
     this.messageIndex = 0;
     this.startTime = null;
+    this.timeoutDuration = options.timeoutDuration || (8 * 60 * 1000); // 8 min default
+    this.countdownMode = options.countdownMode !== false; // true by default
     this.isVisible = false;
     this.destroyed = false;
 
@@ -461,9 +463,19 @@
     if (!this.startTime) return;
 
     var elapsed = Date.now() - this.startTime;
-    var seconds = Math.floor(elapsed / 1000);
-    var mins = Math.floor(seconds / 60);
-    var secs = seconds % 60;
+    var totalSeconds;
+
+    if (this.countdownMode) {
+      // Countdown: show remaining time
+      var remaining = Math.max(0, this.timeoutDuration - elapsed);
+      totalSeconds = Math.ceil(remaining / 1000);
+    } else {
+      // Elapsed: show time passed
+      totalSeconds = Math.floor(elapsed / 1000);
+    }
+
+    var mins = Math.floor(totalSeconds / 60);
+    var secs = totalSeconds % 60;
 
     this.elements.time.textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
   };
